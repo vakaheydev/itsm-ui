@@ -56,6 +56,7 @@ const Validator = (function() {
      */
     function validateField(field, value) {
         // Для repeatable полей валидация не применяется на верхнем уровне
+        // (поля внутри блоков валидируются отдельно с полными именами)
         if (field.type === 'repeatable') {
             return null;
         }
@@ -120,10 +121,42 @@ const Validator = (function() {
         const errors = {};
 
         fields.forEach(field => {
-            const value = formData[field.name] || '';
-            const error = validateField(field, value);
-            if (error) {
-                errors[field.name] = error;
+            if (field.type === 'repeatable') {
+                // Для repeatable полей проверяем все блоки
+                // Ищем все поля с префиксом field.name_
+                const repeatableFieldPrefix = field.name + '_';
+                Object.keys(formData).forEach(function(dataKey) {
+                    if (dataKey.startsWith(repeatableFieldPrefix)) {
+                        // Извлекаем имя оригинального поля из полного имени
+                        // Формат: containerName_blockIndex_fieldName
+                        // Удаляем префикс containerName_
+                        const withoutContainer = dataKey.substring(field.name.length + 1); // '0_api'
+                        // Удаляем blockIndex_ (все до первого подчеркивания)
+                        const firstUnderscore = withoutContainer.indexOf('_');
+                        if (firstUnderscore !== -1) {
+                            const originalFieldName = withoutContainer.substring(firstUnderscore + 1);
+                            
+                            // Находим описание этого поля в конфигурации
+                            const subField = field.fields.find(function(f) {
+                                return f.name === originalFieldName;
+                            });
+                            
+                            if (subField) {
+                                const value = formData[dataKey] || '';
+                                const error = validateField(subField, value);
+                                if (error) {
+                                    errors[dataKey] = error;
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                const value = formData[field.name] || '';
+                const error = validateField(field, value);
+                if (error) {
+                    errors[field.name] = error;
+                }
             }
         });
 

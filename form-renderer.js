@@ -1052,7 +1052,7 @@ const FormRenderer = (function() {
     }
 
     /**
-     * Получение данных формы
+     * Получение данных формы в плоском формате (для валидации)
      * @returns {Object}
      */
     function getFormData() {
@@ -1060,27 +1060,22 @@ const FormRenderer = (function() {
 
         formFields.forEach(function(field) {
             if (field.type === 'repeatable') {
-                // Для повторяющихся блоков собираем массив данных
+                // Для повторяющихся блоков добавляем каждое поле с префиксом
                 const blocksContainer = document.getElementById(field.name + '-blocks');
                 if (blocksContainer) {
                     const blocks = blocksContainer.querySelectorAll('.repeatable-block');
-                    const blockDataArray = [];
 
                     blocks.forEach(function(block) {
-                        const blockData = {};
                         field.fields.forEach(function(subField) {
                             const blockIndex = block.getAttribute('data-block-index');
                             const fieldName = field.name + '_' + blockIndex + '_' + subField.name;
                             const element = document.getElementById(fieldName);
                             
                             if (element) {
-                                blockData[subField.name] = element.value;
+                                data[fieldName] = element.value;
                             }
                         });
-                        blockDataArray.push(blockData);
                     });
-
-                    data[field.name] = blockDataArray;
                 }
             } else {
                 const element = document.getElementById(field.name);
