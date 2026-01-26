@@ -1,0 +1,544 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #1976D2 0%, #0D47A1 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 700px;
+    margin: 0 auto;
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 30px;
+    text-align: center;
+    font-size: 28px;
+}
+
+h2 {
+    color: #333;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 22px;
+}
+
+.form-selector {
+    text-align: center;
+}
+
+.form-type-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.form-type-btn {
+    padding: 20px;
+    background: linear-gradient(135deg, #1976D2 0%, #0D47A1 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-type-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(25, 118, 210, 0.5);
+}
+
+.form-type-btn:active {
+    transform: translateY(0);
+}
+
+.form-type-btn-icon {
+    font-size: 32px;
+}
+
+.form-type-btn-text {
+    font-size: 16px;
+}
+
+.form-type-btn-description {
+    font-size: 13px;
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+.form-wrapper {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.form-header h2 {
+    margin: 0;
+    text-align: left;
+}
+
+.btn-back {
+    padding: 8px 16px;
+    background: #f5f5f5;
+    color: #666;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+    background: #e0e0e0;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.form-group label .required {
+    color: #e74c3c;
+    margin-left: 3px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #1976D2;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+}
+
+.form-control.error {
+    border-color: #e74c3c;
+}
+
+.form-control.error:focus {
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+/* Кастомный select с поиском */
+.custom-select {
+    position: relative;
+    width: 100%;
+}
+
+.custom-select-input {
+    width: 100%;
+    padding-right: 40px;
+    cursor: pointer;
+}
+
+.custom-select-arrow {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #666;
+    font-size: 12px;
+    transition: transform 0.3s ease;
+}
+
+.custom-select-options.show ~ .custom-select-arrow {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.custom-select-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid #1976D2;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.custom-select-options.show {
+    max-height: 250px;
+    opacity: 1;
+    visibility: visible;
+    margin-top: -2px;
+}
+
+.custom-select-option {
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.custom-select-option:last-child {
+    border-bottom: none;
+}
+
+.custom-select-option:hover {
+    background-color: #BBDEFB;
+    color: #0D47A1;
+}
+
+.custom-select-option:active {
+    background-color: #e8ecff;
+}
+
+.custom-select-no-results {
+    padding: 12px 15px;
+    text-align: center;
+    color: #999;
+    font-style: italic;
+}
+
+/* Стили для скроллбара в списке опций */
+.custom-select-options::-webkit-scrollbar {
+    width: 8px;
+}
+
+.custom-select-options::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 0 0 6px 0;
+}
+
+.custom-select-options::-webkit-scrollbar-thumb {
+    background: #1976D2;
+    border-radius: 4px;
+}
+
+.custom-select-options::-webkit-scrollbar-thumb:hover {
+    background: #0D47A1;
+}
+
+/* Multiselect с множественным выбором */
+.custom-multiselect {
+    position: relative;
+    width: 100%;
+}
+
+.multiselect-tags {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.multiselect-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: linear-gradient(135deg, #1976D2 0%, #0D47A1 100%);
+    color: white;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.multiselect-tag-remove {
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    font-weight: bold;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.multiselect-tag-remove:hover {
+    opacity: 1;
+}
+
+.multiselect-input {
+    width: 100%;
+    padding-right: 40px;
+    cursor: pointer;
+}
+
+.multiselect-arrow {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #666;
+    font-size: 12px;
+    transition: transform 0.3s ease;
+}
+
+.multiselect-dropdown.show ~ .multiselect-arrow {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.multiselect-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid #1976D2;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 0;
+    overflow: hidden;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.multiselect-dropdown.show {
+    max-height: 350px;
+    opacity: 1;
+    visibility: visible;
+    margin-top: -2px;
+    overflow-y: auto;
+}
+
+.multiselect-controls {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.multiselect-control-btn {
+    flex: 1;
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid #1976D2;
+    border-radius: 4px;
+    color: #1976D2;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.multiselect-control-btn:hover {
+    background: #1976D2;
+    color: white;
+}
+
+.multiselect-control-btn:active {
+    transform: scale(0.98);
+}
+
+.multiselect-options {
+    max-height: none;
+    overflow-y: visible;
+    background: white;
+}
+
+.multiselect-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.multiselect-option:last-child {
+    border-bottom: none;
+}
+
+.multiselect-option:hover {
+    background-color: #BBDEFB;
+}
+
+.multiselect-option input[type="checkbox"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: #1976D2;
+}
+
+.multiselect-option label {
+    cursor: pointer;
+    flex: 1;
+    margin: 0;
+}
+
+.multiselect-no-results {
+    padding: 12px 15px;
+    text-align: center;
+    color: #999;
+    font-style: italic;
+}
+
+/* Стили для скроллбара в multiselect */
+.multiselect-dropdown::-webkit-scrollbar {
+    width: 8px;
+}
+
+.multiselect-dropdown::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 0 0 6px 0;
+}
+
+.multiselect-dropdown::-webkit-scrollbar-thumb {
+    background: #1976D2;
+    border-radius: 4px;
+}
+
+.multiselect-dropdown::-webkit-scrollbar-thumb:hover {
+    background: #0D47A1;
+}
+
+
+
+
+.error-message {
+    color: #e74c3c;
+    font-size: 13px;
+    margin-top: 6px;
+    display: block;
+    min-height: 18px;
+}
+
+.form-actions {
+    margin-top: 30px;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.btn {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #1976D2 0%, #0D47A1 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(25, 118, 210, 0.5);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.btn-secondary:hover {
+    background: #e0e0e0;
+}
+
+.success-message {
+    margin-top: 20px;
+    padding: 15px 20px;
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.hidden {
+    display: none;
+}
+
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 25px;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+}
+

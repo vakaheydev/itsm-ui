@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Форма заявки</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Система подачи заявок Gravitee</h1>
+
+        <!-- Выбор типа заявки -->
+        <div id="form-selector" class="form-selector">
+            <h2>Выберите тип заявки</h2>
+            <div id="form-type-buttons" class="form-type-buttons">
+                <!-- Кнопки будут добавлены динамически -->
+            </div>
+        </div>
+
+        <!-- Сама форма заявки -->
+        <div id="form-wrapper" class="form-wrapper hidden">
+            <div class="form-header">
+                <h2 id="form-title">Форма заявки</h2>
+                <button id="back-btn" class="btn-back">← Назад к выбору заявки</button>
+            </div>
+            <div id="form-container"></div>
+            <div class="form-actions">
+                <button id="submit-btn" class="btn btn-primary">Отправить заявку</button>
+                <button id="reset-btn" class="btn btn-secondary">Очистить форму</button>
+            </div>
+            <div id="success-message" class="success-message hidden">
+                Заявка успешно отправлена!
+            </div>
+        </div>
+    </div>
+
+    <script src="validator.js"></script>
+    <script src="data-service.js"></script>
+    <script src="form-configs.js"></script>
+    <script src="form-renderer.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+

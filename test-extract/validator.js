@@ -1,0 +1,107 @@
+// Модуль валидации полей формы
+const Validator = (function() {
+    'use strict';
+
+    // Правила валидации для разных типов полей
+    const validationRules = {
+        email: {
+            pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            message: 'Введите корректный email адрес'
+        },
+        number: {
+            pattern: /^-?\d+(\.\d+)?$/,
+            message: 'Введите корректное число'
+        }
+    };
+
+    /**
+     * Валидация одного поля
+     * @param {Object} field - Описание поля
+     * @param {String} value - Значение поля
+     * @returns {String|null} - Текст ошибки или null если валидация пройдена
+     */
+    function validateField(field, value) {
+        // Проверка обязательности заполнения
+        if (field.required && (!value || value.trim() === '')) {
+            return 'Это поле обязательно для заполнения';
+        }
+
+        // Если поле пустое и не обязательное, валидация пройдена
+        if (!value || value.trim() === '') {
+            return null;
+        }
+
+        // Проверка минимальной длины
+        if (field.minLength && value.length < field.minLength) {
+            return `Минимальная длина: ${field.minLength} символов`;
+        }
+
+        // Проверка максимальной длины
+        if (field.maxLength && value.length > field.maxLength) {
+            return `Максимальная длина: ${field.maxLength} символов`;
+        }
+
+        // Проверка формата email
+        if (field.type === 'email' && !validationRules.email.pattern.test(value)) {
+            return validationRules.email.message;
+        }
+
+        // Проверка числового формата
+        if (field.type === 'number') {
+            if (!validationRules.number.pattern.test(value)) {
+                return validationRules.number.message;
+            }
+
+            const numValue = parseFloat(value);
+
+            // Проверка минимального значения
+            if (field.min !== undefined && numValue < field.min) {
+                return `Минимальное значение: ${field.min}`;
+            }
+
+            // Проверка максимального значения
+            if (field.max !== undefined && numValue > field.max) {
+                return `Максимальное значение: ${field.max}`;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Валидация всей формы
+     * @param {Array} fields - Массив описаний полей
+     * @param {Object} formData - Объект с данными формы
+     * @returns {Object} - Объект с ошибками { fieldName: errorMessage }
+     */
+    function validateForm(fields, formData) {
+        const errors = {};
+
+        fields.forEach(field => {
+            const value = formData[field.name] || '';
+            const error = validateField(field, value);
+            if (error) {
+                errors[field.name] = error;
+            }
+        });
+
+        return errors;
+    }
+
+    /**
+     * Проверка, есть ли ошибки в форме
+     * @param {Object} errors - Объект с ошибками
+     * @returns {Boolean}
+     */
+    function hasErrors(errors) {
+        return Object.keys(errors).length > 0;
+    }
+
+    // Публичный API
+    return {
+        validateField: validateField,
+        validateForm: validateForm,
+        hasErrors: hasErrors
+    };
+})();
+
