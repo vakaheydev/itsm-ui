@@ -382,6 +382,328 @@ const FormRenderer = (function() {
     }
 
     /**
+     * Создание повторяющегося блока
+     * @param {Object} field - Описание поля
+     * @returns {HTMLElement}
+     */
+    function createRepeatableField(field) {
+        const container = document.createElement('div');
+        container.className = 'repeatable-container';
+        container.id = field.name + '-container';
+        container.setAttribute('data-field-name', field.name);
+        container.setAttribute('data-min-instances', field.minInstances || 1);
+        container.setAttribute('data-max-instances', field.maxInstances || 10);
+        container.setAttribute('data-field-config', JSON.stringify(field.fields));
+
+        // Контейнер для блоков
+        const blocksContainer = document.createElement('div');
+        blocksContainer.className = 'repeatable-blocks';
+        blocksContainer.id = field.name + '-blocks';
+
+        // Кнопка добавления блока
+        const addButton = document.createElement('button');
+        addButton.type = 'button';
+        addButton.className = 'btn btn-secondary repeatable-add-btn';
+        addButton.textContent = field.addButtonText || '+ Добавить блок';
+        addButton.addEventListener('click', function() {
+            addRepeatableBlockInternal(container, blocksContainer, field.name, field.fields);
+        });
+
+        // Контейнер для сообщения об ошибке
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'repeatable-error-message';
+        errorMessage.id = field.name + '-error-message';
+        errorMessage.style.display = 'none';
+        errorMessage.style.color = '#dc3545';
+        errorMessage.style.fontSize = '14px';
+        errorMessage.style.marginTop = '8px';
+        errorMessage.style.fontWeight = '500';
+
+        container.appendChild(blocksContainer);
+        container.appendChild(addButton);
+        container.appendChild(errorMessage);
+
+        // Добавляем минимальное количество блоков
+        const minInstances = field.minInstances || 1;
+        for (let i = 0; i < minInstances; i++) {
+            addRepeatableBlockInternal(container, blocksContainer, field.name, field.fields, true);
+        }
+
+        return container;
+    }
+
+    /**
+     * Внутренняя функция для добавления блока (принимает элементы напрямую)
+     * @param {HTMLElement} container - Элемент контейнера
+     * @param {HTMLElement} blocksContainer - Элемент для блоков
+     * @param {String} containerName - Название контейнера
+     * @param {Array} fields - Поля блока
+     * @param {Boolean} isInitial - Начальный блок
+     */
+    function addRepeatableBlockInternal(container, blocksContainer, containerName, fields, isInitial) {
+        if (!container || !blocksContainer) {
+            console.error('Контейнер для repeatable блока не найден:', containerName);
+            return;
+        }
+        
+        const maxInstances = parseInt(container.getAttribute('data-max-instances'));
+        const minInstances = parseInt(container.getAttribute('data-min-instances'));
+        
+        const currentBlocks = blocksContainer.querySelectorAll('.repeatable-block');
+        const errorMessage = document.getElementById(containerName + '-error-message');
+        
+        if (currentBlocks.length >= maxInstances) {
+            // Показываем красное сообщение вместо alert
+            if (errorMessage) {
+                errorMessage.textContent = 'Достигнуто максимальное количество блоков: ' + maxInstances;
+                errorMessage.style.display = 'block';
+                
+                // Автоматически скрываем сообщение через 3 секунды
+                setTimeout(function() {
+                    errorMessage.style.display = 'none';
+                }, 3000);
+            }
+            return;
+        }
+        
+        // Скрываем сообщение об ошибке, если оно было показано
+        if (errorMessage) {
+            errorMessage.style.display = 'none';
+        }
+
+        const blockIndex = currentBlocks.length;
+        
+        const block = document.createElement('div');
+        block.className = 'repeatable-block';
+        block.setAttribute('data-block-index', blockIndex);
+
+        // Заголовок блока
+        const blockHeader = document.createElement('div');
+        blockHeader.className = 'repeatable-block-header';
+        
+        const blockTitle = document.createElement('h3');
+        blockTitle.className = 'repeatable-block-title';
+        blockTitle.textContent = 'Блок #' + (blockIndex + 1);
+        
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'btn btn-secondary repeatable-remove-btn';
+        removeButton.textContent = '× Удалить';
+        removeButton.addEventListener('click', function() {
+            removeRepeatableBlock(containerName, block);
+        });
+        
+        blockHeader.appendChild(blockTitle);
+        if (!isInitial || blockIndex >= minInstances) {
+            blockHeader.appendChild(removeButton);
+        }
+        
+        block.appendChild(blockHeader);
+
+        // Добавляем поля блока
+        fields.forEach(function(field) {
+            const fieldCopy = Object.assign({}, field);
+            // Изменяем имя поля, чтобы оно было уникальным
+            fieldCopy.name = containerName + '_' + blockIndex + '_' + field.name;
+            fieldCopy.originalName = field.name;
+            fieldCopy.blockIndex = blockIndex;
+            fieldCopy.containerName = containerName;
+            
+            const formGroup = createFormGroup(fieldCopy);
+            block.appendChild(formGroup);
+        });
+
+        blocksContainer.appendChild(block);
+        
+        // Загружаем данные для справочников в новом блоке
+        loadRepeatableBlockDictionaries(containerName, blockIndex, fields);
+        
+        // Уведомляем о создании нового блока для настройки обработчиков
+        const event = new CustomEvent('repeatableBlockAdded', {
+            detail: { containerName: containerName, blockIndex: blockIndex, fields: fields }
+        });
+        document.dispatchEvent(event);
+    }
+
+    /**
+     * Удаление повторяющегося блока
+     * @param {String} containerName - Название контейнера
+     * @param {HTMLElement} block - Блок для удаления
+     */
+    function removeRepeatableBlock(containerName, block) {
+        const container = document.getElementById(containerName + '-container');
+        const blocksContainer = document.getElementById(containerName + '-blocks');
+        const minInstances = parseInt(container.getAttribute('data-min-instances'));
+        const errorMessage = document.getElementById(containerName + '-error-message');
+        
+        const currentBlocks = blocksContainer.querySelectorAll('.repeatable-block');
+        
+        if (currentBlocks.length <= minInstances) {
+            // Показываем красное сообщение вместо alert
+            if (errorMessage) {
+                errorMessage.textContent = 'Невозможно удалить: должен остаться минимум ' + minInstances + ' блок(ов)';
+                errorMessage.style.display = 'block';
+                
+                // Автоматически скрываем сообщение через 3 секунды
+                setTimeout(function() {
+                    errorMessage.style.display = 'none';
+                }, 3000);
+            }
+            return;
+        }
+
+        block.remove();
+        
+        // Перенумеруем оставшиеся блоки
+        renumberRepeatableBlocks(containerName);
+    }
+
+    /**
+     * Перенумерация блоков после удаления
+     * @param {String} containerName
+     */
+    function renumberRepeatableBlocks(containerName) {
+        const blocksContainer = document.getElementById(containerName + '-blocks');
+        const blocks = blocksContainer.querySelectorAll('.repeatable-block');
+        
+        blocks.forEach(function(block, index) {
+            block.setAttribute('data-block-index', index);
+            const title = block.querySelector('.repeatable-block-title');
+            if (title) {
+                title.textContent = 'Блок #' + (index + 1);
+            }
+        });
+    }
+
+    /**
+     * Загрузка справочников для полей в блоке
+     * @param {String} containerName
+     * @param {Number} blockIndex
+     * @param {Array} fields
+     */
+    function loadRepeatableBlockDictionaries(containerName, blockIndex, fields) {
+        console.log('Loading dictionaries for block:', containerName, blockIndex);
+        fields.forEach(function(field) {
+            const fieldName = containerName + '_' + blockIndex + '_' + field.name;
+            console.log('Checking field:', fieldName, 'type:', field.type, 'dictionary:', field.dictionary, 'dependsOn:', field.dependsOn);
+            
+            if (field.type === 'select' && field.dictionary) {
+                if (!field.dependsOn) {
+                    // Поле без зависимостей - загружаем сразу
+                    console.log('Loading select dictionary for:', fieldName);
+                    DataService.loadDictionary(field.dictionary).then(function(data) {
+                        console.log('Loaded data for', fieldName, ':', data);
+                        updateSelectOptions(fieldName, data);
+                    }).catch(function(error) {
+                        console.error('Error loading dictionary for', fieldName, ':', error);
+                    });
+                } else {
+                    // Поле с зависимостями - проверяем текущие значения зависимых полей
+                    loadDictionaryWithDependencies(fieldName, field, containerName, blockIndex);
+                }
+            }
+
+            if (field.type === 'multiselect' && field.dictionary) {
+                if (!field.dependsOn) {
+                    // Поле без зависимостей - загружаем сразу
+                    console.log('Loading multiselect dictionary for:', fieldName);
+                    DataService.loadDictionary(field.dictionary).then(function(data) {
+                        console.log('Loaded data for', fieldName, ':', data);
+                        updateMultiSelectOptions(fieldName, data);
+                    }).catch(function(error) {
+                        console.error('Error loading dictionary for', fieldName, ':', error);
+                    });
+                } else {
+                    // Поле с зависимостями - проверяем текущие значения зависимых полей
+                    loadDictionaryWithDependencies(fieldName, field, containerName, blockIndex);
+                }
+            }
+        });
+    }
+
+    /**
+     * Загрузка справочника с учетом зависимостей
+     * @param {String} fieldName - Полное имя поля (с префиксом блока)
+     * @param {Object} field - Описание поля
+     * @param {String} containerName - Имя контейнера
+     * @param {Number} blockIndex - Индекс блока
+     */
+    function loadDictionaryWithDependencies(fieldName, field, containerName, blockIndex) {
+        console.log('Loading dictionary with dependencies for:', fieldName, 'dependsOn:', field.dependsOn);
+        
+        const dependencyParams = {};
+        let allFilled = true;
+        const dependencies = Array.isArray(field.dependsOn) ? field.dependsOn : [field.dependsOn];
+
+        dependencies.forEach(function(depFieldName) {
+            // Сначала проверяем в основной форме
+            let depElement = document.getElementById(depFieldName);
+            let value = depElement ? depElement.value : '';
+            
+            // Если не найдено в основной форме, проверяем в том же блоке
+            if (!value) {
+                const blockDepFieldName = containerName + '_' + blockIndex + '_' + depFieldName;
+                depElement = document.getElementById(blockDepFieldName);
+                value = depElement ? depElement.value : '';
+            }
+
+            console.log('Dependency field:', depFieldName, 'value:', value);
+            
+            if (!value) {
+                allFilled = false;
+            }
+            dependencyParams[depFieldName] = value;
+        });
+
+        console.log('All dependencies filled:', allFilled, 'params:', dependencyParams);
+
+        if (allFilled) {
+            // Все зависимости заполнены - загружаем данные
+            DataService.loadDictionary(field.dictionary, dependencyParams).then(function(data) {
+                console.log('Loaded dependent data for', fieldName, ':', data);
+                if (field.type === 'multiselect') {
+                    updateMultiSelectOptions(fieldName, data);
+                } else {
+                    updateSelectOptions(fieldName, data);
+                }
+            }).catch(function(error) {
+                console.error('Error loading dependent dictionary for', fieldName, ':', error);
+            });
+        } else {
+            // Не все зависимости заполнены - показываем сообщение
+            console.log('Not all dependencies filled for', fieldName);
+            const message = 'Сначала выберите: ' + dependencies.join(', ');
+            if (field.type === 'multiselect') {
+                updateMultiSelectOptions(fieldName, [], message);
+            } else {
+                updateSelectOptions(fieldName, [], message);
+            }
+        }
+    }
+
+    /**
+     * Настройка обработчиков зависимостей для полей в repeatable блоках
+     * @param {String} containerName
+     * @param {Number} blockIndex
+     * @param {Array} fields
+     * @param {Function} onFieldChange - Коллбэк для обработки изменений
+     */
+    function setupRepeatableBlockDependencies(containerName, blockIndex, fields, onFieldChange) {
+        fields.forEach(function(field) {
+            const fieldName = containerName + '_' + blockIndex + '_' + field.name;
+            const element = document.getElementById(fieldName);
+            
+            if (!element) return;
+            
+            if ((field.type === 'select' || field.type === 'multiselect') && field.dictionary && onFieldChange) {
+                element.addEventListener('change', function() {
+                    onFieldChange(field, element.value, containerName, blockIndex, fields);
+                });
+            }
+        });
+    }
+
+    /**
      * Создание группы формы с полем
      * @param {Object} field - Описание поля
      * @returns {HTMLElement}
@@ -410,6 +732,8 @@ const FormRenderer = (function() {
             fieldElement = createMultiSelectField(field);
         } else if (field.type === 'textarea') {
             fieldElement = createTextareaField(field);
+        } else if (field.type === 'repeatable') {
+            fieldElement = createRepeatableField(field);
         } else {
             fieldElement = createInputField(field);
         }
@@ -482,8 +806,9 @@ const FormRenderer = (function() {
      * Обновление опций выпадающего списка
      * @param {String} fieldName - Название поля
      * @param {Array} options - Массив опций { id, name }
+     * @param {String} dependencyMessage - Сообщение о зависимостях (опционально)
      */
-    function updateSelectOptions(fieldName, options) {
+    function updateSelectOptions(fieldName, options, dependencyMessage) {
         const hiddenInput = document.getElementById(fieldName);
         const optionsList = document.getElementById(fieldName + '-options');
 
@@ -494,6 +819,18 @@ const FormRenderer = (function() {
 
         // Очищаем список
         optionsList.innerHTML = '';
+
+        // Если передано сообщение о зависимостях и нет опций - показываем предупреждение
+        if (dependencyMessage && options.length === 0) {
+            const messageElement = document.createElement('div');
+            messageElement.className = 'custom-select-option custom-select-warning';
+            messageElement.textContent = dependencyMessage;
+            messageElement.style.fontStyle = 'italic';
+            messageElement.style.color = '#dc3545';
+            messageElement.style.cursor = 'default';
+            optionsList.appendChild(messageElement);
+            return;
+        }
 
         // Добавляем новые опции
         options.forEach(function(option) {
@@ -560,8 +897,9 @@ const FormRenderer = (function() {
      * Обновление опций multiselect
      * @param {String} fieldName - Название поля
      * @param {Array} options - Массив опций { id, name }
+     * @param {String} dependencyMessage - Сообщение о зависимостях (опционально)
      */
-    function updateMultiSelectOptions(fieldName, options) {
+    function updateMultiSelectOptions(fieldName, options, dependencyMessage) {
         const hiddenInput = document.getElementById(fieldName);
         const optionsList = document.getElementById(fieldName + '-options');
 
@@ -572,6 +910,18 @@ const FormRenderer = (function() {
 
         // Очищаем список
         optionsList.innerHTML = '';
+
+        // Если нет опций и есть сообщение о зависимостях
+        if (options.length === 0 && dependencyMessage) {
+            const messageElement = document.createElement('div');
+            messageElement.className = 'multiselect-option multiselect-warning';
+            messageElement.textContent = dependencyMessage;
+            messageElement.style.fontStyle = 'italic';
+            messageElement.style.color = '#dc3545';
+            messageElement.style.padding = '8px 12px';
+            optionsList.appendChild(messageElement);
+            return;
+        }
 
         // Добавляем новые опции
         options.forEach(function(option) {
@@ -709,9 +1059,34 @@ const FormRenderer = (function() {
         const data = {};
 
         formFields.forEach(function(field) {
-            const element = document.getElementById(field.name);
-            if (element) {
-                data[field.name] = element.value;
+            if (field.type === 'repeatable') {
+                // Для повторяющихся блоков собираем массив данных
+                const blocksContainer = document.getElementById(field.name + '-blocks');
+                if (blocksContainer) {
+                    const blocks = blocksContainer.querySelectorAll('.repeatable-block');
+                    const blockDataArray = [];
+
+                    blocks.forEach(function(block) {
+                        const blockData = {};
+                        field.fields.forEach(function(subField) {
+                            const blockIndex = block.getAttribute('data-block-index');
+                            const fieldName = field.name + '_' + blockIndex + '_' + subField.name;
+                            const element = document.getElementById(fieldName);
+                            
+                            if (element) {
+                                blockData[subField.name] = element.value;
+                            }
+                        });
+                        blockDataArray.push(blockData);
+                    });
+
+                    data[field.name] = blockDataArray;
+                }
+            } else {
+                const element = document.getElementById(field.name);
+                if (element) {
+                    data[field.name] = element.value;
+                }
             }
         });
 
@@ -764,7 +1139,26 @@ const FormRenderer = (function() {
      */
     function clearForm() {
         formFields.forEach(function(field) {
-            if (field.type === 'select') {
+            if (field.type === 'repeatable') {
+                // Для repeatable блоков
+                const container = document.getElementById(field.name + '-container');
+                const blocksContainer = document.getElementById(field.name + '-blocks');
+                
+                if (container && blocksContainer) {
+                    const minInstances = parseInt(container.getAttribute('data-min-instances'));
+                    const blocks = blocksContainer.querySelectorAll('.repeatable-block');
+                    
+                    // Удаляем все блоки
+                    blocks.forEach(function(block) {
+                        block.remove();
+                    });
+                    
+                    // Создаём минимальное количество пустых блоков
+                    for (let i = 0; i < minInstances; i++) {
+                        addRepeatableBlockInternal(container, blocksContainer, field.name, field.fields, true);
+                    }
+                }
+            } else if (field.type === 'select') {
                 // Для кастомного select
                 const hiddenInput = document.getElementById(field.name);
                 const searchInput = document.querySelector('[data-field-name="' + field.name + '"]');
@@ -842,7 +1236,8 @@ const FormRenderer = (function() {
         showErrors: showErrors,
         clearErrors: clearErrors,
         clearForm: clearForm,
-        getFieldByName: getFieldByName
+        getFieldByName: getFieldByName,
+        setupRepeatableBlockDependencies: setupRepeatableBlockDependencies
     };
 })();
 

@@ -55,38 +55,46 @@ const Validator = (function() {
      * @returns {String|null} - Текст ошибки или null если валидация пройдена
      */
     function validateField(field, value) {
+        // Для repeatable полей валидация не применяется на верхнем уровне
+        if (field.type === 'repeatable') {
+            return null;
+        }
+
+        // Преобразуем значение в строку для валидации
+        const stringValue = value != null ? String(value) : '';
+
         // Проверка обязательности заполнения
-        if (field.required && (!value || value.trim() === '')) {
+        if (field.required && (!stringValue || stringValue.trim() === '')) {
             return 'Это поле обязательно для заполнения';
         }
 
         // Если поле пустое и не обязательное, валидация пройдена
-        if (!value || value.trim() === '') {
+        if (!stringValue || stringValue.trim() === '') {
             return null;
         }
 
         // Проверка минимальной длины
-        if (field.minLength && value.length < field.minLength) {
+        if (field.minLength && stringValue.length < field.minLength) {
             return `Минимальная длина: ${field.minLength} символов`;
         }
 
         // Проверка максимальной длины
-        if (field.maxLength && value.length > field.maxLength) {
+        if (field.maxLength && stringValue.length > field.maxLength) {
             return `Максимальная длина: ${field.maxLength} символов`;
         }
 
         // Проверка формата email
-        if (field.type === 'email' && !validationRules.email.pattern.test(value)) {
+        if (field.type === 'email' && !validationRules.email.pattern.test(stringValue)) {
             return validationRules.email.message;
         }
 
         // Проверка числового формата
         if (field.type === 'number') {
-            if (!validationRules.number.pattern.test(value)) {
+            if (!validationRules.number.pattern.test(stringValue)) {
                 return validationRules.number.message;
             }
 
-            const numValue = parseFloat(value);
+            const numValue = parseFloat(stringValue);
 
             // Проверка минимального значения
             if (field.min !== undefined && numValue < field.min) {

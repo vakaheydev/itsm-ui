@@ -156,31 +156,42 @@ const FormConfigs = (function() {
             required: true,
             dictionary: 'graviteeZones'
         },
+        // Повторяющийся блок для API и методов
         {
-            name: 'api',
-            type: 'select',
-            label: 'API',
-            placeholder: 'Выберите API',
-            required: true,
-            dictionary: 'api',
-            dependsOn: ['environment', 'zone']
-        },
-        {
-            name: 'api_methods',
-            type: 'multiselect',
-            label: 'Методы API',
-            placeholder: 'Выберите методы (можно несколько)',
-            required: true,
-            dictionary: 'api_methods',
-            dependsOn: 'api'
-        },
-        {
-            name: 'auth_method',
-            type: 'select',
-            label: 'Способ аутентификации',
-            placeholder: 'Выберите способ аутентификации',
-            required: true,
-            dictionary: 'graviteeAuthMethods'
+            name: 'api_subscriptions',
+            type: 'repeatable',
+            label: 'Подписки на API',
+            addButtonText: '+ Добавить API',
+            minInstances: 1,
+            maxInstances: 10,
+            fields: [
+                {
+                    name: 'api',
+                    type: 'select',
+                    label: 'API',
+                    placeholder: 'Выберите API',
+                    required: true,
+                    dictionary: 'api',
+                    dependsOn: ['environment', 'zone']
+                },
+                {
+                    name: 'api_methods',
+                    type: 'multiselect',
+                    label: 'Методы API',
+                    placeholder: 'Выберите методы (можно несколько)',
+                    required: true,
+                    dictionary: 'api_methods',
+                    dependsOn: 'api'
+                },
+                {
+                    name: 'auth_method',
+                    type: 'select',
+                    label: 'Способ аутентификации',
+                    placeholder: 'Выберите способ аутентификации',
+                    required: true,
+                    dictionary: 'graviteeAuthMethods'
+                }
+            ]
         }
     ];
 

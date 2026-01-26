@@ -185,6 +185,160 @@
                 });
             }
         });
+
+        // Настройка обработчиков для repeatable блоков
+        setupRepeatableBlocksHandlers();
+
+        // Слушаем событие добавления нового repeatable блока
+        document.addEventListener('repeatableBlockAdded', function(e) {
+            const detail = e.detail;
+            setupRepeatableBlockEventHandlers(detail.containerName, detail.blockIndex, detail.fields);
+        });
+    }
+
+    /**
+     * Настройка обработчиков для repeatable блоков
+     */
+    function setupRepeatableBlocksHandlers() {
+        currentFormConfig.forEach(function(field) {
+            if (field.type === 'repeatable') {
+                const container = document.getElementById(field.name + '-blocks');
+                if (!container) return;
+
+                // Используем MutationObserver для отслеживания добавления новых блоков
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.classList && node.classList.contains('repeatable-block')) {
+                                const blockIndex = node.getAttribute('data-block-index');
+                                setupRepeatableBlockEventHandlers(field.name, blockIndex, field.fields);
+                            }
+                        });
+                    });
+                });
+
+                observer.observe(container, { childList: true });
+
+                // Настройка обработчиков для существующих блоков
+                const existingBlocks = container.querySelectorAll('.repeatable-block');
+                existingBlocks.forEach(function(block) {
+                    const blockIndex = block.getAttribute('data-block-index');
+                    setupRepeatableBlockEventHandlers(field.name, blockIndex, field.fields);
+                });
+            }
+        });
+    }
+
+    /**
+     * Настройка обработчиков для полей repeatable блока
+     * @param {String} containerName
+     * @param {Number} blockIndex
+     * @param {Array} fields
+     */
+    function setupRepeatableBlockEventHandlers(containerName, blockIndex, fields) {
+        fields.forEach(function(field) {
+            const fieldName = containerName + '_' + blockIndex + '_' + field.name;
+            const element = document.getElementById(fieldName);
+            
+            if (!element) return;
+            
+            // Обработка зависимостей внутри блока
+            if ((field.type === 'select' || field.type === 'multiselect') && field.dictionary) {
+                element.addEventListener('change', function() {
+                    handleRepeatableFieldDependencies(field, element.value, containerName, blockIndex, fields);
+                });
+            }
+        });
+    }
+
+    /**
+     * Обработка зависимостей для полей внутри repeatable блока
+     * @param {Object} changedField - Поле, которое изменилось
+     * @param {String} changedValue - Новое значение
+     * @param {String} containerName - Имя контейнера
+     * @param {Number} blockIndex - Индекс блока
+     * @param {Array} allFields - Все поля в блоке
+     */
+    function handleRepeatableFieldDependencies(changedField, changedValue, containerName, blockIndex, allFields) {
+        // Находим поля, которые зависят от изменённого поля
+        const dependentFields = allFields.filter(function(field) {
+            if (Array.isArray(field.dependsOn)) {
+                return field.dependsOn.indexOf(changedField.originalName || changedField.name) !== -1;
+            }
+            return field.dependsOn === (changedField.originalName || changedField.name);
+        });
+
+        dependentFields.forEach(function(depField) {
+            const depFieldName = containerName + '_' + blockIndex + '_' + depField.name;
+            
+            // Множественная зависимость
+            if (Array.isArray(depField.dependsOn)) {
+                const dependencyParams = {};
+                let allFilled = true;
+
+                depField.dependsOn.forEach(function(dependsOnFieldName) {
+                    let value;
+                    
+                    // Проверяем, зависит ли от поля из основной формы или из того же блока
+                    const blockFieldName = containerName + '_' + blockIndex + '_' + dependsOnFieldName;
+                    const blockFieldElement = document.getElementById(blockFieldName);
+                    
+                    if (blockFieldElement) {
+                        // Поле из того же блока
+                        value = blockFieldElement.value;
+                    } else {
+                        // Поле из основной формы
+                        const mainFieldElement = document.getElementById(dependsOnFieldName);
+                        value = mainFieldElement ? mainFieldElement.value : '';
+                    }
+
+                    if (!value) {
+                        allFilled = false;
+                    }
+                    dependencyParams[dependsOnFieldName] = value;
+                });
+
+                if (allFilled) {
+                    DataService.loadDictionary(depField.dictionary, dependencyParams).then(function(data) {
+                        if (depField.type === 'multiselect') {
+                            FormRenderer.updateMultiSelectOptions(depFieldName, data);
+                        } else {
+                            FormRenderer.updateSelectOptions(depFieldName, data);
+                        }
+                    });
+                } else {
+                    // Очищаем с сообщением
+                    const message = getDependencyMessage(depField.dependsOn);
+                    if (depField.type === 'multiselect') {
+                        FormRenderer.updateMultiSelectOptions(depFieldName, [], message);
+                    } else {
+                        FormRenderer.updateSelectOptions(depFieldName, [], message);
+                    }
+                }
+            } else {
+                // Одиночная зависимость
+                if (changedValue) {
+                    const dependencyParams = {};
+                    dependencyParams[depField.dependsOn] = changedValue;
+
+                    DataService.loadDictionary(depField.dictionary, dependencyParams).then(function(data) {
+                        if (depField.type === 'multiselect') {
+                            FormRenderer.updateMultiSelectOptions(depFieldName, data);
+                        } else {
+                            FormRenderer.updateSelectOptions(depFieldName, data);
+                        }
+                    });
+                } else {
+                    // Очищаем с сообщением
+                    const message = getDependencyMessage(depField.dependsOn);
+                    if (depField.type === 'multiselect') {
+                        FormRenderer.updateMultiSelectOptions(depFieldName, [], message);
+                    } else {
+                        FormRenderer.updateSelectOptions(depFieldName, [], message);
+                    }
+                }
+            }
+        });
     }
 
     /**
@@ -220,6 +374,32 @@
 
         if (errorContainer) {
             errorContainer.textContent = '';
+        }
+    }
+
+    /**
+     * Получение названия поля по его имени
+     * @param {String} fieldName
+     * @returns {String}
+     */
+    function getFieldLabel(fieldName) {
+        const field = FormRenderer.getFieldByName(fieldName);
+        return field ? field.label : fieldName;
+    }
+
+    /**
+     * Формирование сообщения о зависимостях
+     * @param {Array|String} dependsOn - Зависимости поля
+     * @returns {String}
+     */
+    function getDependencyMessage(dependsOn) {
+        if (Array.isArray(dependsOn)) {
+            const labels = dependsOn.map(function(fieldName) {
+                return getFieldLabel(fieldName);
+            });
+            return 'Сначала выберите: ' + labels.join(' и ');
+        } else {
+            return 'Сначала выберите: ' + getFieldLabel(dependsOn);
         }
     }
 
@@ -268,11 +448,12 @@
                         }
                     });
                 } else {
-                    // Не все зависимые поля заполнены - очищаем
+                    // Не все зависимые поля заполнены - очищаем с сообщением
+                    const message = getDependencyMessage(field.dependsOn);
                     if (field.type === 'multiselect') {
-                        FormRenderer.updateMultiSelectOptions(field.name, []);
+                        FormRenderer.updateMultiSelectOptions(field.name, [], message);
                     } else {
-                        FormRenderer.updateSelectOptions(field.name, []);
+                        FormRenderer.updateSelectOptions(field.name, [], message);
                     }
                 }
             } else {
@@ -291,13 +472,116 @@
                         }
                     });
                 } else {
-                    // Очищаем зависимое поле
+                    // Очищаем зависимое поле с сообщением
+                    const message = getDependencyMessage(field.dependsOn);
                     if (field.type === 'multiselect') {
-                        FormRenderer.updateMultiSelectOptions(field.name, []);
+                        FormRenderer.updateMultiSelectOptions(field.name, [], message);
                     } else {
-                        FormRenderer.updateSelectOptions(field.name, []);
+                        FormRenderer.updateSelectOptions(field.name, [], message);
                     }
                 }
+            }
+        });
+
+        // Обновляем зависимые поля внутри repeatable блоков
+        updateDependentFieldsInRepeatableBlocks(parentFieldName, parentValue);
+    }
+
+    /**
+     * Обновление зависимых полей внутри repeatable блоков
+     * @param {String} parentFieldName - Имя изменённого поля из основной формы
+     * @param {String} parentValue - Значение изменённого поля
+     */
+    function updateDependentFieldsInRepeatableBlocks(parentFieldName, parentValue) {
+        currentFormConfig.forEach(function(field) {
+            if (field.type === 'repeatable') {
+                const blocksContainer = document.getElementById(field.name + '-blocks');
+                if (!blocksContainer) return;
+
+                const blocks = blocksContainer.querySelectorAll('.repeatable-block');
+                
+                blocks.forEach(function(block) {
+                    const blockIndex = block.getAttribute('data-block-index');
+                    
+                    // Проверяем каждое поле в блоке
+                    field.fields.forEach(function(blockField) {
+                        // Если поле зависит от изменённого поля основной формы
+                        let isDependentOnParent = false;
+                        
+                        if (Array.isArray(blockField.dependsOn)) {
+                            isDependentOnParent = blockField.dependsOn.indexOf(parentFieldName) !== -1;
+                        } else if (blockField.dependsOn === parentFieldName) {
+                            isDependentOnParent = true;
+                        }
+                        
+                        if (isDependentOnParent) {
+                            const blockFieldName = field.name + '_' + blockIndex + '_' + blockField.name;
+                            
+                            // Множественная зависимость
+                            if (Array.isArray(blockField.dependsOn)) {
+                                const dependencyParams = {};
+                                let allFilled = true;
+
+                                blockField.dependsOn.forEach(function(depName) {
+                                    // Проверяем сначала в основной форме
+                                    const mainElement = document.getElementById(depName);
+                                    let value = mainElement ? mainElement.value : '';
+                                    
+                                    // Затем в блоке
+                                    if (!value) {
+                                        const blockElement = document.getElementById(field.name + '_' + blockIndex + '_' + depName);
+                                        value = blockElement ? blockElement.value : '';
+                                    }
+
+                                    if (!value) {
+                                        allFilled = false;
+                                    }
+                                    dependencyParams[depName] = value;
+                                });
+
+                                if (allFilled) {
+                                    DataService.loadDictionary(blockField.dictionary, dependencyParams).then(function(data) {
+                                        if (blockField.type === 'multiselect') {
+                                            FormRenderer.updateMultiSelectOptions(blockFieldName, data);
+                                        } else {
+                                            FormRenderer.updateSelectOptions(blockFieldName, data);
+                                        }
+                                    });
+                                } else {
+                                    // Очищаем с сообщением
+                                    const message = getDependencyMessage(blockField.dependsOn);
+                                    if (blockField.type === 'multiselect') {
+                                        FormRenderer.updateMultiSelectOptions(blockFieldName, [], message);
+                                    } else {
+                                        FormRenderer.updateSelectOptions(blockFieldName, [], message);
+                                    }
+                                }
+                            } else {
+                                // Одиночная зависимость
+                                if (parentValue) {
+                                    const dependencyParams = {};
+                                    dependencyParams[blockField.dependsOn] = parentValue;
+
+                                    DataService.loadDictionary(blockField.dictionary, dependencyParams).then(function(data) {
+                                        if (blockField.type === 'multiselect') {
+                                            FormRenderer.updateMultiSelectOptions(blockFieldName, data);
+                                        } else {
+                                            FormRenderer.updateSelectOptions(blockFieldName, data);
+                                        }
+                                    });
+                                } else {
+                                    // Очищаем с сообщением
+                                    const message = getDependencyMessage(blockField.dependsOn);
+                                    if (blockField.type === 'multiselect') {
+                                        FormRenderer.updateMultiSelectOptions(blockFieldName, [], message);
+                                    } else {
+                                        FormRenderer.updateSelectOptions(blockFieldName, [], message);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
             }
         });
     }
