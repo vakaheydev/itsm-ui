@@ -53,7 +53,11 @@ const DataService = (function() {
         graviteeAuthMethods: { type: 'mock' },
         
         // Mock справочники для API (temporary - вместо HTTP)
-        api: { type: 'mock' },
+        api: { 
+            type: 'mock',
+            dependsOn: 'multiple', // зависит от нескольких полей
+            params: ['environment', 'zone'] // список параметров
+        },
         api_methods: { 
             type: 'mock',
             dependsOn: 'api' // зависит от выбранного API
@@ -85,13 +89,53 @@ const DataService = (function() {
         ],
         
         // Mock данные для API (temporary - вместо HTTP)
-        api: [
-            { id: 'api-1', name: 'API Пользователей (UserAPI)' },
-            { id: 'api-2', name: 'API Заказов (OrderAPI)' },
-            { id: 'api-3', name: 'API Справочников (DictionaryAPI)' },
-            { id: 'api-4', name: 'API Платежей (PaymentAPI)' },
-            { id: 'api-5', name: 'API Уведомлений (NotificationAPI)' }
-        ],
+        // Структура с зависимостями: ключ = environment:zone
+        api: {
+            'TEST:INT': [
+                { id: 'api-1', name: 'API Пользователей (UserAPI) - TEST INT' },
+                { id: 'api-2', name: 'API Заказов (OrderAPI) - TEST INT' },
+                { id: 'api-3', name: 'API Справочников (DictionaryAPI) - TEST INT' }
+            ],
+            'TEST:EXT': [
+                { id: 'api-4', name: 'API Платежей (PaymentAPI) - TEST EXT' },
+                { id: 'api-5', name: 'API Уведомлений (NotificationAPI) - TEST EXT' }
+            ],
+            'TEST:INT_EXT': [
+                { id: 'api-1', name: 'API Пользователей (UserAPI) - TEST INT+EXT' },
+                { id: 'api-2', name: 'API Заказов (OrderAPI) - TEST INT+EXT' },
+                { id: 'api-4', name: 'API Платежей (PaymentAPI) - TEST INT+EXT' },
+                { id: 'api-5', name: 'API Уведомлений (NotificationAPI) - TEST INT+EXT' }
+            ],
+            'REGRESS:INT': [
+                { id: 'api-1', name: 'API Пользователей (UserAPI) - REGRESS INT' },
+                { id: 'api-2', name: 'API Заказов (OrderAPI) - REGRESS INT' },
+                { id: 'api-3', name: 'API Справочников (DictionaryAPI) - REGRESS INT' }
+            ],
+            'REGRESS:EXT': [
+                { id: 'api-4', name: 'API Платежей (PaymentAPI) - REGRESS EXT' },
+                { id: 'api-5', name: 'API Уведомлений (NotificationAPI) - REGRESS EXT' }
+            ],
+            'REGRESS:INT_EXT': [
+                { id: 'api-1', name: 'API Пользователей (UserAPI) - REGRESS INT+EXT' },
+                { id: 'api-2', name: 'API Заказов (OrderAPI) - REGRESS INT+EXT' },
+                { id: 'api-3', name: 'API Справочников (DictionaryAPI) - REGRESS INT+EXT' },
+                { id: 'api-4', name: 'API Платежей (PaymentAPI) - REGRESS INT+EXT' },
+                { id: 'api-5', name: 'API Уведомлений (NotificationAPI) - REGRESS INT+EXT' }
+            ],
+            'PROD:INT': [
+                { id: 'api-1', name: 'API Пользователей (UserAPI) - PROD INT' },
+                { id: 'api-2', name: 'API Заказов (OrderAPI) - PROD INT' }
+            ],
+            'PROD:EXT': [
+                { id: 'api-4', name: 'API Платежей (PaymentAPI) - PROD EXT' },
+                { id: 'api-5', name: 'API Уведомлений (NotificationAPI) - PROD EXT' }
+            ],
+            'PROD:INT_EXT': [
+                { id: 'api-1', name: 'API Пользователей (UserAPI) - PROD INT+EXT' },
+                { id: 'api-2', name: 'API Заказов (OrderAPI) - PROD INT+EXT' },
+                { id: 'api-4', name: 'API Платежей (PaymentAPI) - PROD INT+EXT' }
+            ]
+        },
         
         // Mock данные для методов API (temporary - вместо HTTP)
         // Структура с зависимостями: ключ = apiId
@@ -271,15 +315,30 @@ const DataService = (function() {
             if (config.dependsOn && dependencyParameters) {
                 // Если mockData[dictionaryName] - объект с зависимостями
                 if (data && typeof data === 'object' && !Array.isArray(data)) {
-                    // Получаем ключ зависимости
                     let dependencyKey = null;
                     
-                    if (typeof dependencyParameters === 'object' && !Array.isArray(dependencyParameters)) {
-                        // dependencyParameters - объект вида {api: 'api-1'}
-                        dependencyKey = dependencyParameters[config.dependsOn];
-                    } else if (typeof dependencyParameters === 'string') {
-                        // dependencyParameters - просто строка 'api-1'
-                        dependencyKey = dependencyParameters;
+                    // Множественная зависимость (например, для api: зависит от environment и zone)
+                    if (config.dependsOn === 'multiple' && config.params) {
+                        if (typeof dependencyParameters === 'object' && !Array.isArray(dependencyParameters)) {
+                            // Формируем составной ключ из значений зависимых полей
+                            // Например: {environment: 'TEST', zone: 'INT'} -> 'TEST:INT'
+                            const keyParts = [];
+                            config.params.forEach(function(paramName) {
+                                if (dependencyParameters[paramName]) {
+                                    keyParts.push(dependencyParameters[paramName]);
+                                }
+                            });
+                            dependencyKey = keyParts.join(':');
+                        }
+                    } else {
+                        // Одиночная зависимость
+                        if (typeof dependencyParameters === 'object' && !Array.isArray(dependencyParameters)) {
+                            // dependencyParameters - объект вида {api: 'api-1'}
+                            dependencyKey = dependencyParameters[config.dependsOn];
+                        } else if (typeof dependencyParameters === 'string') {
+                            // dependencyParameters - просто строка 'api-1'
+                            dependencyKey = dependencyParameters;
+                        }
                     }
                     
                     // Получаем данные по ключу зависимости
