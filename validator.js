@@ -2,6 +2,40 @@
 const Validator = (function() {
     'use strict';
 
+    /**
+     * Санитизация HTML для защиты от XSS
+     * @param {String} str - Строка для очистки
+     * @returns {String}
+     */
+    function sanitizeHTML(str) {
+        if (typeof str !== 'string') return '';
+        
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    /**
+     * Экранирование спецсимволов HTML
+     * @param {String} str - Строка для экранирования
+     * @returns {String}
+     */
+    function escapeHTML(str) {
+        if (typeof str !== 'string') return '';
+        
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#x27;',
+            '/': '&#x2F;'
+        };
+        return str.replace(/[&<>"'\/]/g, function(char) {
+            return map[char];
+        });
+    }
+
     // Правила валидации для разных типов полей
     const validationRules = {
         email: {
@@ -101,7 +135,9 @@ const Validator = (function() {
     return {
         validateField: validateField,
         validateForm: validateForm,
-        hasErrors: hasErrors
+        hasErrors: hasErrors,
+        sanitizeHTML: sanitizeHTML,
+        escapeHTML: escapeHTML
     };
 })();
 

@@ -78,7 +78,7 @@ const FormRenderer = (function() {
         // Стрелка-индикатор
         const arrow = document.createElement('span');
         arrow.className = 'custom-select-arrow';
-        arrow.innerHTML = '▼';
+        arrow.textContent = '\u25BC'; // Используем textContent вместо innerHTML
 
         // Контейнер для выпадающего списка опций
         const optionsList = document.createElement('div');
@@ -191,7 +191,7 @@ const FormRenderer = (function() {
         // Стрелка-индикатор
         const arrow = document.createElement('span');
         arrow.className = 'multiselect-arrow';
-        arrow.innerHTML = '▼';
+        arrow.textContent = '\u25BC'; // Используем textContent вместо innerHTML
 
         // Контейнер для выпадающего списка опций
         const optionsList = document.createElement('div');
@@ -499,8 +499,9 @@ const FormRenderer = (function() {
         options.forEach(function(option) {
             const optionElement = document.createElement('div');
             optionElement.className = 'custom-select-option';
-            optionElement.textContent = option.name;
-            optionElement.setAttribute('data-value', option.id);
+            // Безопасная установка текста
+            optionElement.textContent = option.name || '';
+            optionElement.setAttribute('data-value', option.id || '');
 
             // Обработчик клика по опции
             optionElement.addEventListener('click', function() {
@@ -686,7 +687,7 @@ const FormRenderer = (function() {
             // Кнопка удаления
             const removeBtn = document.createElement('span');
             removeBtn.className = 'multiselect-tag-remove';
-            removeBtn.innerHTML = '×';
+            removeBtn.textContent = '\u00D7'; // Используем textContent вместо innerHTML
             removeBtn.addEventListener('click', function() {
                 // Снимаем галочку с checkbox
                 if (option) {

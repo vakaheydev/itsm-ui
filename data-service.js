@@ -3,6 +3,33 @@ const DataService = (function() {
     'use strict';
 
     const baseDictionaryHost = 'http://localhost:8080';
+    
+    // Конфигурация безопасности
+    const securityConfig = {
+        requestTimeout: 30000, // 30 секунд
+        maxRetries: 3,
+        allowedHosts: ['localhost:8080'], // Белый список хостов
+    };
+
+    /**
+     * Валидация URL для защиты от SSRF
+     * @param {String} url - URL для проверки
+     * @returns {Boolean}
+     */
+    function isValidUrl(url) {
+        try {
+            const parsedUrl = new URL(url, baseDictionaryHost);
+            const host = parsedUrl.host;
+            
+            // Проверяем, что хост в белом списке
+            return securityConfig.allowedHosts.some(function(allowedHost) {
+                return host === allowedHost;
+            });
+        } catch (e) {
+            console.error('Ошибка валидации URL:', e);
+            return false;
+        }
+    }
 
     // Конфигурация справочников: какие через HTTP, какие моки
     const dictionaryConfig = {
@@ -125,16 +152,38 @@ const DataService = (function() {
      * @returns {Promise}
      */
     function getJson(url) {
-        return fetch(baseDictionaryHost + url, {
+        // Валидация URL
+        const fullUrl = baseDictionaryHost + url;
+        if (!isValidUrl(fullUrl)) {
+            return Promise.reject(new Error('Недопустимый URL: ' + fullUrl));
+        }
+
+        // Создаем AbortController для таймаута
+        const controller = new AbortController();
+        const timeoutId = setTimeout(function() {
+            controller.abort();
+        }, securityConfig.requestTimeout);
+
+        return fetch(fullUrl, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json'
-            }
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest' // Защита от CSRF
+            },
+            signal: controller.signal,
+            credentials: 'same-origin' // Защита от CSRF
         }).then(function(response) {
+            clearTimeout(timeoutId);
             if (!response.ok) {
                 throw new Error('HTTP error: ' + response.status);
             }
             return response.json();
+        }).catch(function(error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error('Превышен таймаут запроса');
+            }
+            throw error;
         });
     }
 
@@ -145,17 +194,38 @@ const DataService = (function() {
      * @returns {Promise}
      */
     function postJson(url, body) {
+        // Валидация URL
+        if (!isValidUrl(url)) {
+            return Promise.reject(new Error('Недопустимый URL: ' + url));
+        }
+
+        // Создаем AbortController для таймаута
+        const controller = new AbortController();
+        const timeoutId = setTimeout(function() {
+            controller.abort();
+        }, securityConfig.requestTimeout);
+
         return fetch(url, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest' // Защита от CSRF
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal: controller.signal,
+            credentials: 'same-origin' // Защита от CSRF
         }).then(function(response) {
+            clearTimeout(timeoutId);
             if (!response.ok) {
                 throw new Error('HTTP error: ' + response.status);
             }
             return response.json();
+        }).catch(function(error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error('Превышен таймаут запроса');
+            }
+            throw error;
         });
     }
 
