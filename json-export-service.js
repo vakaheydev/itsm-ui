@@ -9,7 +9,8 @@ const JsonExportService = (function() {
     const formHandlers = {
         'incident': handleIncidentForm,
         'change': handleChangeForm,
-        'service': handleServiceForm
+        'service': handleServiceForm,
+        'gravitee': handleGraviteeForm
     };
 
     /**
@@ -66,6 +67,62 @@ const JsonExportService = (function() {
             submittedAt: new Date().toISOString(),
             rawData: formData
         };
+    }
+
+    /**
+     * Хендлер для формы "Подписка в Gravitee"
+     * @param {Object} formData
+     * @returns {Object}
+     */
+    function handleGraviteeForm(formData) {
+        const result = {
+            environment: formData.environment || '',
+            zone: formData.zone || '',
+            flow: 'create_new_subscription',
+            subscriptions: {}
+        };
+
+        // Обработка repeatable блоков api_subscriptions
+        // Находим все блоки по паттерну api_subscriptions_N_*
+        const subscriptionBlocks = {};
+        
+        // Группируем поля по номеру блока
+        Object.keys(formData).forEach(function(key) {
+            const match = key.match(/^api_subscriptions_(\d+)_(.+)$/);
+            if (match) {
+                const blockIndex = match[1];
+                const fieldName = match[2];
+                
+                if (!subscriptionBlocks[blockIndex]) {
+                    subscriptionBlocks[blockIndex] = {};
+                }
+                subscriptionBlocks[blockIndex][fieldName] = formData[key];
+            }
+        });
+
+        // Преобразуем блоки в структуру subscriptions
+        Object.keys(subscriptionBlocks).forEach(function(blockIndex) {
+            const block = subscriptionBlocks[blockIndex];
+            const authMethod = block.auth_method || '';
+            const api = block.api || '';
+            const methodsString = block.api_methods || '';
+            
+            // Разбиваем методы по запятой и убираем пробелы
+            const methods = methodsString
+                .split(',')
+                .map(function(method) { return method.trim(); })
+                .filter(function(method) { return method.length > 0; });
+
+            // Создаем структуру subscriptions[authMethod][api] = [methods]
+            if (authMethod && api) {
+                if (!result.subscriptions[authMethod]) {
+                    result.subscriptions[authMethod] = {};
+                }
+                result.subscriptions[authMethod][api] = methods;
+            }
+        });
+
+        return result;
     }
 
     /**
