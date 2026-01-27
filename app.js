@@ -613,6 +613,17 @@
         // Очищаем ошибки
         FormRenderer.clearErrors();
 
+        // Экспортируем данные в JSON и показываем пользователю
+        const result = JsonExportService.exportToJson(currentFormType.id, formData);
+        
+        if (result.success) {
+            JsonExportService.showJsonModal(result.json);
+        } else {
+            console.error('Ошибка при экспорте JSON:', result.error);
+            alert('Ошибка при формировании JSON: ' + result.error);
+        }
+
+        /* ВРЕМЕННО ЗАКОММЕНТИРОВАНО - отправка на сервер
         // Отправляем форму
         DataService.submitForm(formData).then(function(response) {
             if (response.success) {
@@ -637,6 +648,7 @@
         }).catch(function(error) {
             console.error('Ошибка при отправке формы:', error);
         });
+        */
     }
 
     // Запуск приложения после загрузки DOM
