@@ -85,6 +85,7 @@
     function initForm() {
         const formContainer = document.getElementById('form-container');
         const submitBtn = document.getElementById('submit-btn');
+        const showJsonBtn = document.getElementById('show-json-btn');
         const resetBtn = document.getElementById('reset-btn');
         const backBtn = document.getElementById('back-btn');
         const successMessage = document.getElementById('success-message');
@@ -104,6 +105,12 @@
         submitBtn.parentNode.replaceChild(newSubmitBtn, submitBtn);
         newSubmitBtn.addEventListener('click', function() {
             handleFormSubmit(successMessage);
+        });
+
+        const newShowJsonBtn = showJsonBtn.cloneNode(true);
+        showJsonBtn.parentNode.replaceChild(newShowJsonBtn, showJsonBtn);
+        newShowJsonBtn.addEventListener('click', function() {
+            handleShowJson();
         });
 
         const newResetBtn = resetBtn.cloneNode(true);
@@ -587,6 +594,47 @@
     }
 
     /**
+     * Показ JSON файла
+     */
+    function handleShowJson() {
+        // Получаем данные формы
+        const formData = FormRenderer.getFormData();
+
+        // Добавляем тип формы к данным
+        formData._formType = currentFormType.id;
+        formData._formName = currentFormType.name;
+
+        // Валидация формы
+        const errors = Validator.validateForm(currentFormConfig, formData);
+
+        if (Validator.hasErrors(errors)) {
+            // Отображаем ошибки
+            FormRenderer.showErrors(errors);
+            return;
+        }
+
+        // Очищаем ошибки
+        FormRenderer.clearErrors();
+
+        // Экспортируем данные в JSON и показываем пользователю
+        const result = JsonExportService.exportToJson(currentFormType.id, formData);
+        const errorMessage = document.getElementById('error-message');
+        const errorMessageText = document.getElementById('error-message-text');
+        
+        if (result.success) {
+            if (errorMessage) errorMessage.classList.add('hidden');
+            JsonExportService.showJsonModal(result.json);
+        } else {
+            console.error('Ошибка при экспорте JSON:', result.error);
+            if (errorMessageText) errorMessageText.textContent = 'Ошибка при формировании JSON: ' + result.error;
+            if (errorMessage) {
+                errorMessage.classList.remove('hidden');
+                errorMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+    }
+
+    /**
      * Обработка отправки формы
      * @param {HTMLElement} successMessage
      */
@@ -613,17 +661,6 @@
         // Очищаем ошибки
         FormRenderer.clearErrors();
 
-        // Экспортируем данные в JSON и показываем пользователю
-        const result = JsonExportService.exportToJson(currentFormType.id, formData);
-        
-        if (result.success) {
-            JsonExportService.showJsonModal(result.json);
-        } else {
-            console.error('Ошибка при экспорте JSON:', result.error);
-            alert('Ошибка при формировании JSON: ' + result.error);
-        }
-
-        /* ВРЕМЕННО ЗАКОММЕНТИРОВАНО - отправка на сервер
         // Отправляем форму
         DataService.submitForm(formData).then(function(response) {
             if (response.success) {
@@ -648,7 +685,6 @@
         }).catch(function(error) {
             console.error('Ошибка при отправке формы:', error);
         });
-        */
     }
 
     // Запуск приложения после загрузки DOM
