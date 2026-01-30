@@ -61,6 +61,15 @@ const Validator = (function() {
             return null;
         }
 
+        // Для boolean полей проверяем только обязательность
+        if (field.type === 'boolean') {
+            // Если поле обязательное и должно быть отмечено
+            if (field.required && value !== true) {
+                return 'Это поле должно быть отмечено';
+            }
+            return null;
+        }
+
         // Преобразуем значение в строку для валидации
         const stringValue = value != null ? String(value) : '';
 

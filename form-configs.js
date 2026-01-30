@@ -133,6 +133,14 @@ const FormConfigs = (function() {
             max: 50
         },
         {
+            name: 'isRecurring',
+            type: 'boolean',
+            label: 'Повторяющееся бронирование',
+            description: 'Установите, если нужно регулярное бронирование',
+            required: false,
+            defaultValue: false
+        },
+        {
             name: 'equipment',
             type: 'select',
             label: 'Необходимое оборудование',

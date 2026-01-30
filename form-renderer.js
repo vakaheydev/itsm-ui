@@ -382,6 +382,52 @@ const FormRenderer = (function() {
     }
 
     /**
+     * Создание checkbox поля (boolean)
+     * @param {Object} field - Описание поля
+     * @returns {HTMLElement}
+     */
+    function createBooleanField(field) {
+        const container = document.createElement('div');
+        container.className = 'boolean-field-container';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = field.name;
+        checkbox.name = field.name;
+        checkbox.className = 'boolean-checkbox';
+        checkbox.value = 'true';
+
+        // Устанавливаем начальное значение
+        if (field.defaultValue === true) {
+            checkbox.checked = true;
+        }
+
+        // Создаем визуальный переключатель (toggle switch)
+        const toggle = document.createElement('label');
+        toggle.className = 'boolean-toggle';
+        toggle.htmlFor = field.name;
+
+        const slider = document.createElement('span');
+        slider.className = 'boolean-slider';
+
+        toggle.appendChild(checkbox);
+        toggle.appendChild(slider);
+
+        // Текст описания рядом с переключателем
+        if (field.description) {
+            const description = document.createElement('span');
+            description.className = 'boolean-description';
+            description.textContent = field.description;
+            container.appendChild(toggle);
+            container.appendChild(description);
+        } else {
+            container.appendChild(toggle);
+        }
+
+        return container;
+    }
+
+    /**
      * Создание повторяющегося блока
      * @param {Object} field - Описание поля
      * @returns {HTMLElement}
@@ -738,9 +784,15 @@ const FormRenderer = (function() {
             return false;
         }
 
-        const currentValue = targetElement.value;
+        // Для boolean (checkbox) полей используем checked вместо value
+        let currentValue;
+        if (targetElement.type === 'checkbox') {
+            currentValue = targetElement.checked;
+        } else {
+            currentValue = targetElement.value;
+        }
         
-        // Проверка на конкретное значение
+        // Проверка на конкретное значение (для boolean: true/false)
         if (condition.value !== undefined) {
             return currentValue === condition.value;
         }
@@ -774,7 +826,12 @@ const FormRenderer = (function() {
             // Очищаем значение скрытого поля
             const element = document.getElementById(fieldName);
             if (element) {
-                element.value = '';
+                // Для boolean полей сбрасываем checked
+                if (field.type === 'boolean' || element.type === 'checkbox') {
+                    element.checked = false;
+                } else {
+                    element.value = '';
+                }
                 
                 // Для кастомных select очищаем также видимый input
                 if (field.type === 'select') {
@@ -857,6 +914,8 @@ const FormRenderer = (function() {
             fieldElement = createTextareaField(field);
         } else if (field.type === 'repeatable') {
             fieldElement = createRepeatableField(field);
+        } else if (field.type === 'boolean') {
+            fieldElement = createBooleanField(field);
         } else {
             fieldElement = createInputField(field);
         }
@@ -1195,10 +1254,21 @@ const FormRenderer = (function() {
                             const element = document.getElementById(fieldName);
                             
                             if (element) {
-                                data[fieldName] = element.value;
+                                // Для boolean полей внутри repeatable блоков
+                                if (subField.type === 'boolean') {
+                                    data[fieldName] = element.checked;
+                                } else {
+                                    data[fieldName] = element.value;
+                                }
                             }
                         });
                     });
+                }
+            } else if (field.type === 'boolean') {
+                // Для boolean полей возвращаем true/false
+                const element = document.getElementById(field.name);
+                if (element) {
+                    data[field.name] = element.checked;
                 }
             } else {
                 const element = document.getElementById(field.name);

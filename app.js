@@ -191,6 +191,13 @@
                     handleDependentFields(field.name, element.value);
                 });
             }
+
+            // Обработка boolean полей (обновление visibleWhen зависимых полей)
+            if (field.type === 'boolean') {
+                element.addEventListener('change', function() {
+                    handleDependentFields(field.name, element.checked);
+                });
+            }
         });
 
         // Настройка обработчиков для repeatable блоков
@@ -253,6 +260,13 @@
             if ((field.type === 'select' || field.type === 'multiselect') && field.dictionary) {
                 element.addEventListener('change', function() {
                     handleRepeatableFieldDependencies(field, element.value, containerName, blockIndex, fields);
+                });
+            }
+
+            // Обработка boolean полей внутри repeatable блока
+            if (field.type === 'boolean') {
+                element.addEventListener('change', function() {
+                    handleRepeatableFieldDependencies(field, element.checked, containerName, blockIndex, fields);
                 });
             }
         });
