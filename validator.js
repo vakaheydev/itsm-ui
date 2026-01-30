@@ -121,6 +121,22 @@ const Validator = (function() {
     }
 
     /**
+     * Проверка, видимо ли поле (не скрыто через visibleWhen)
+     * @param {String} fieldName - Имя поля
+     * @returns {Boolean}
+     */
+    function isFieldVisible(fieldName) {
+        const element = document.getElementById(fieldName);
+        if (!element) return false;
+        
+        const formGroup = element.closest('.form-group');
+        if (!formGroup) return true;
+        
+        // Проверяем, скрыто ли поле (display: none)
+        return formGroup.style.display !== 'none';
+    }
+
+    /**
      * Валидация всей формы
      * @param {Array} fields - Массив описаний полей
      * @param {Object} formData - Объект с данными формы
@@ -136,6 +152,11 @@ const Validator = (function() {
                 const repeatableFieldPrefix = field.name + '_';
                 Object.keys(formData).forEach(function(dataKey) {
                     if (dataKey.startsWith(repeatableFieldPrefix)) {
+                        // Пропускаем скрытые поля
+                        if (!isFieldVisible(dataKey)) {
+                            return;
+                        }
+
                         // Извлекаем имя оригинального поля из полного имени
                         // Формат: containerName_blockIndex_fieldName
                         // Удаляем префикс containerName_
@@ -161,6 +182,11 @@ const Validator = (function() {
                     }
                 });
             } else {
+                // Пропускаем скрытые поля
+                if (!isFieldVisible(field.name)) {
+                    return;
+                }
+
                 const value = formData[field.name] || '';
                 const error = validateField(field, value);
                 if (error) {
