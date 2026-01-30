@@ -780,8 +780,15 @@ const FormRenderer = (function() {
         const targetElement = document.getElementById(targetFieldName);
         
         if (!targetElement) {
-            // Если поле не найдено, скрываем зависимое поле
-            return false;
+            // Если поле не найдено:
+            // - Для полей внутри repeatable блоков (containerName задан) - скрываем
+            // - Для полей основной формы - показываем (элемент появится позже)
+            if (containerName !== undefined && blockIndex !== undefined) {
+                return false;
+            }
+            // Для основной формы: показываем по умолчанию, 
+            // видимость будет обновлена после рендера
+            return true;
         }
 
         // Для boolean (checkbox) полей используем checked вместо value
@@ -813,7 +820,15 @@ const FormRenderer = (function() {
      * @param {Number} blockIndex - Индекс блока (опционально)
      */
     function updateFieldVisibility(fieldName, field, containerName, blockIndex) {
-        const formGroup = document.getElementById(fieldName)?.closest('.form-group');
+        let formGroup;
+        
+        // Для repeatable блоков ищем контейнер по ID
+        if (field.type === 'repeatable') {
+            const container = document.getElementById(fieldName + '-container');
+            formGroup = container?.closest('.form-group');
+        } else {
+            formGroup = document.getElementById(fieldName)?.closest('.form-group');
+        }
         
         if (!formGroup) return;
 
@@ -945,6 +960,20 @@ const FormRenderer = (function() {
 
         // Добавляем глобальный обработчик для закрытия выпадающих списков
         setupGlobalClickHandler();
+
+        // Обновляем видимость всех полей с visibleWhen после рендера
+        updateInitialVisibility();
+    }
+
+    /**
+     * Обновление начальной видимости всех полей с visibleWhen
+     */
+    function updateInitialVisibility() {
+        formFields.forEach(function(field) {
+            if (field.visibleWhen) {
+                updateFieldVisibility(field.name, field);
+            }
+        });
     }
 
     /**

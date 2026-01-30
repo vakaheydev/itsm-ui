@@ -227,7 +227,11 @@ const FormConfigs = (function() {
                     required: true,
                     dictionary: 'graviteeAuthMethods'
                 }
-            ]
+            ],
+            visibleWhen: {
+                field: 'environment',
+                values: ['TEST']
+            }
         }
     ];
 
