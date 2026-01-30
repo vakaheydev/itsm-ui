@@ -35,6 +35,20 @@ const FormConfigs = (function() {
             dictionary: 'priorities'
         },
         {
+            name: 'urgentReason',
+            type: 'textarea',
+            label: 'Причина срочности',
+            placeholder: 'Укажите причину, почему заявка срочная',
+            required: true,
+            minLength: 10,
+            maxLength: 500,
+            rows: 3,
+            visibleWhen: {
+                field: 'priority',
+                value: 'urgent'
+            }
+        },
+        {
             name: 'description',
             type: 'textarea',
             label: 'Описание',
@@ -125,6 +139,20 @@ const FormConfigs = (function() {
             placeholder: 'Выберите оборудование',
             required: false,
             dictionary: 'meetingEquipment'
+        },
+        {
+            name: 'equipmentDetails',
+            type: 'textarea',
+            label: 'Детали по оборудованию',
+            placeholder: 'Опишите особые требования к оборудованию',
+            required: false,
+            minLength: 10,
+            maxLength: 300,
+            rows: 3,
+            visibleWhen: {
+                field: 'equipment',
+                values: ['projector', 'videoconference', 'whiteboard']
+            }
         },
         {
             name: 'purpose',

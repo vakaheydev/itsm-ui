@@ -267,6 +267,14 @@
      * @param {Array} allFields - Все поля в блоке
      */
     function handleRepeatableFieldDependencies(changedField, changedValue, containerName, blockIndex, allFields) {
+        // Обновляем видимость полей в блоке при изменении значения
+        allFields.forEach(function(field) {
+            if (field.visibleWhen && field.visibleWhen.field === (changedField.originalName || changedField.name)) {
+                const fieldName = containerName + '_' + blockIndex + '_' + field.name;
+                FormRenderer.updateFieldVisibility(fieldName, field, containerName, blockIndex);
+            }
+        });
+
         // Находим поля, которые зависят от изменённого поля
         const dependentFields = allFields.filter(function(field) {
             if (Array.isArray(field.dependsOn)) {
@@ -411,11 +419,27 @@
     }
 
     /**
+     * Обновление видимости полей при изменении значения поля
+     * @param {String} changedFieldName - Имя изменившегося поля
+     */
+    function updateFieldsVisibilityOnChange(changedFieldName) {
+        // Проходим по всем полям и обновляем видимость тех, у которых есть visibleWhen
+        currentFormConfig.forEach(function(field) {
+            if (field.visibleWhen && field.visibleWhen.field === changedFieldName) {
+                FormRenderer.updateFieldVisibility(field.name, field);
+            }
+        });
+    }
+
+    /**
      * Обработка зависимых полей
      * @param {String} parentFieldName
      * @param {String} parentValue
      */
     function handleDependentFields(parentFieldName, parentValue) {
+        // Обновляем видимость всех полей с условием visibleWhen
+        updateFieldsVisibilityOnChange(parentFieldName);
+
         // Находим поля, которые зависят от текущего (одиночная или множественная зависимость)
         const dependentFields = currentFormConfig.filter(function(field) {
             if (Array.isArray(field.dependsOn)) {

@@ -57,6 +57,11 @@ const newRequestFormConfig = [
         max: 100,                    // Макс. значение (для number)
         dictionary: 'dictionaryName', // Название справочника (для select)
         dependsOn: 'parentField',    // Зависимость от другого поля
+        visibleWhen: {               // Условие видимости поля (опционально)
+            field: 'parentField',    // Поле, от которого зависит видимость
+            value: 'specificValue'   // Конкретное значение (или используйте values)
+            // values: ['value1', 'value2'] // Массив допустимых значений
+        },
         rows: 4                      // Количество строк (для textarea)
     }
 ];

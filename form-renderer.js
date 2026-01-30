@@ -704,6 +704,121 @@ const FormRenderer = (function() {
     }
 
     /**
+     * Проверка условия видимости поля
+     * @param {Object} field - Описание поля с параметром visibleWhen
+     * @param {String} containerName - Имя контейнера (для repeatable блоков)
+     * @param {Number} blockIndex - Индекс блока (для repeatable блоков)
+     * @returns {Boolean} - true если поле должно быть видимым
+     */
+    function checkFieldVisibility(field, containerName, blockIndex) {
+        // Если нет условия видимости - поле всегда видимо
+        if (!field.visibleWhen) {
+            return true;
+        }
+
+        const condition = field.visibleWhen;
+        let targetFieldName = condition.field;
+        
+        // Для repeatable блоков формируем полное имя поля
+        if (containerName !== undefined && blockIndex !== undefined) {
+            // Сначала проверяем, существует ли поле в том же блоке
+            const blockFieldName = containerName + '_' + blockIndex + '_' + condition.field;
+            const blockFieldElement = document.getElementById(blockFieldName);
+            
+            if (blockFieldElement) {
+                targetFieldName = blockFieldName;
+            }
+            // Если не нашли в блоке, используем имя из основной формы
+        }
+
+        const targetElement = document.getElementById(targetFieldName);
+        
+        if (!targetElement) {
+            // Если поле не найдено, скрываем зависимое поле
+            return false;
+        }
+
+        const currentValue = targetElement.value;
+        
+        // Проверка на конкретное значение
+        if (condition.value !== undefined) {
+            return currentValue === condition.value;
+        }
+        
+        // Проверка на массив допустимых значений
+        if (condition.values !== undefined && Array.isArray(condition.values)) {
+            return condition.values.indexOf(currentValue) !== -1;
+        }
+
+        return true;
+    }
+
+    /**
+     * Обновление видимости поля на основе условия visibleWhen
+     * @param {String} fieldName - Имя поля
+     * @param {Object} field - Описание поля
+     * @param {String} containerName - Имя контейнера (опционально)
+     * @param {Number} blockIndex - Индекс блока (опционально)
+     */
+    function updateFieldVisibility(fieldName, field, containerName, blockIndex) {
+        const formGroup = document.getElementById(fieldName)?.closest('.form-group');
+        
+        if (!formGroup) return;
+
+        const shouldBeVisible = checkFieldVisibility(field, containerName, blockIndex);
+        
+        if (shouldBeVisible) {
+            formGroup.style.display = '';
+        } else {
+            formGroup.style.display = 'none';
+            // Очищаем значение скрытого поля
+            const element = document.getElementById(fieldName);
+            if (element) {
+                element.value = '';
+                
+                // Для кастомных select очищаем также видимый input
+                if (field.type === 'select') {
+                    const searchInput = document.querySelector('[data-field-name="' + fieldName + '"]');
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                } else if (field.type === 'multiselect') {
+                    const searchInput = document.querySelector('[data-field-name="' + fieldName + '"]');
+                    const tagsContainer = document.getElementById(fieldName + '-tags');
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    if (tagsContainer) {
+                        tagsContainer.innerHTML = '';
+                        tagsContainer.style.display = 'none';
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Обновление видимости всех полей с условиями visibleWhen
+     * @param {Array} fields - Массив описаний полей
+     * @param {String} containerName - Имя контейнера (опционально)
+     * @param {Number} blockIndex - Индекс блока (опционально)
+     */
+    function updateAllFieldsVisibility(fields, containerName, blockIndex) {
+        fields.forEach(function(field) {
+            if (field.visibleWhen) {
+                let fieldName = field.name;
+                
+                // Для repeatable блоков формируем полное имя
+                if (containerName !== undefined && blockIndex !== undefined) {
+                    fieldName = containerName + '_' + blockIndex + '_' + field.name;
+                }
+                
+                updateFieldVisibility(fieldName, field, containerName, blockIndex);
+            }
+        });
+    }
+
+    /**
      * Создание группы формы с полем
      * @param {Object} field - Описание поля
      * @returns {HTMLElement}
@@ -711,6 +826,14 @@ const FormRenderer = (function() {
     function createFormGroup(field) {
         const formGroup = document.createElement('div');
         formGroup.className = 'form-group';
+
+        // Устанавливаем начальную видимость на основе visibleWhen
+        if (field.visibleWhen) {
+            const shouldBeVisible = checkFieldVisibility(field, field.containerName, field.blockIndex);
+            if (!shouldBeVisible) {
+                formGroup.style.display = 'none';
+            }
+        }
 
         // Label
         const label = document.createElement('label');
@@ -1232,7 +1355,10 @@ const FormRenderer = (function() {
         clearErrors: clearErrors,
         clearForm: clearForm,
         getFieldByName: getFieldByName,
-        setupRepeatableBlockDependencies: setupRepeatableBlockDependencies
+        setupRepeatableBlockDependencies: setupRepeatableBlockDependencies,
+        updateFieldVisibility: updateFieldVisibility,
+        updateAllFieldsVisibility: updateAllFieldsVisibility,
+        checkFieldVisibility: checkFieldVisibility
     };
 })();
 
